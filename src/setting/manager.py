@@ -2,7 +2,7 @@
 from dynaconf import Dynaconf
 from ruamel.yaml import YAML
 
-from settings.models import *
+from setting.models import *
 
 
 class SettingManager:
@@ -29,3 +29,8 @@ class SettingManager:
     @classmethod
     def __init_settings(cls) -> Settings:
         return Settings()
+
+
+if __name__ == "__main__":
+    settings = SettingManager.get_settings()
+    print(settings)

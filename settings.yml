@@ -1,3 +1,16 @@
 system:
   data_dir: ./data
   log_dir: ./logs
+
+data:
+  train: ./data/train.json
+  test:
+  batch_size: 32
+  num_workers: 4
+
+log:
+  dir: ./logs
+
+
+train:
+  lr: 1e-5

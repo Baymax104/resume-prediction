@@ -14,6 +14,7 @@ class DataSettings(BaseSettings):
     test: str | None = None
     batch_size: int = 32
     num_workers: int = 4
+    max_length: int = 32
 
     @field_validator("train")
     @classmethod

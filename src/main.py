@@ -1,7 +1,10 @@
 # -*- coding: UTF-8 -*-
-import json
+from icecream import ic
+
+from data import ResumeDataset
 
 
-data = json.load(open("../data/data.json", "r", encoding="utf-8"))
-
-print(len(data))
+if __name__ == "__main__":
+    dataset = ResumeDataset("train")
+    sample = dataset[0]
+    ic(sample)

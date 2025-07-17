@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Literal
 
 import torch
-from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset
 from transformers import BertTokenizer
 
@@ -18,12 +17,12 @@ class ResumeDataset(Dataset):
     def __init__(self, split: Literal["train", "test"]):
         self.split = split
         settings = SettingManager.get_settings()
-        self.max_length = settings.data.max_length
-        self.window_size = settings.data.window_size
+        self.max_length = settings.model.max_length
+        self.window_size = settings.model.window_size
         data = self.__load_data(settings)
         self.origin_length = len(data)
         self.data = self.__split_and_flatten_data(data)
-        self.tokenizer = BertTokenizer.from_pretrained("../model/bert-base-chinese")
+        self.tokenizer = BertTokenizer.from_pretrained(settings.data.tokenizer)
 
     def __load_data(self, settings: Settings) -> list[dict]:
         if self.split == "train":
@@ -78,7 +77,7 @@ class ResumeDataset(Dataset):
         resume_features = self.__extract_resume_features(resumes)
 
         # convert to tensor
-        time_features = torch.tensor(time_features)  # (window_size, 1)
+        time_features = torch.tensor(time_features, dtype=torch.float)  # (window_size, 1)
         resume_input_ids = resume_features["input_ids"]  # (window_size, seq_len)
         resume_attention_mask = resume_features["attention_mask"]  # (window_size, seq_len)
         return {

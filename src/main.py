@@ -2,6 +2,7 @@
 from icecream import ic
 
 from data import ResumeDataLoader, ResumeDataset
+from model.model import ResumePredictor
 
 
 if __name__ == "__main__":
@@ -9,4 +10,6 @@ if __name__ == "__main__":
     loader = ResumeDataLoader(dataset)
     it = iter(loader)
     sample = next(it)
-    ic(sample)
+    model = ResumePredictor(window_size=2)
+    output = model(sample)
+    ic(output)

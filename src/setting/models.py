@@ -15,6 +15,7 @@ class DataSettings(BaseSettings):
     batch_size: int = 32
     num_workers: int = 4
     max_length: int = 32
+    window_size: int = 2
 
     @field_validator("train")
     @classmethod
@@ -54,9 +55,11 @@ class LogSettings(BaseSettings):
 
 class TrainSettings(BaseSettings):
     lr: float = 1e-5
+    device: str = "cuda"
 
 
 class Settings(BaseSettings):
+    debug: bool = False
     data: DataSettings = DataSettings()
     log: LogSettings = LogSettings()
     train: TrainSettings = TrainSettings()

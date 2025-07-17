@@ -1,12 +1,16 @@
+debug: true
+
 data:
   train: ./data/train.json
   test:
   batch_size: 32
   num_workers: 4
   max_length: 32
+  window_size: 2
 
 log:
   dir: ./logs
 
 train:
   lr: 1e-5
+  device: cuda

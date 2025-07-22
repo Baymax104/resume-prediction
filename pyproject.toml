@@ -7,6 +7,8 @@ requires-python = ">=3.12"
 dependencies = [
     "dynaconf>=3.2.11",
     "huggingface-hub[cli]>=0.33.4",
+    "json-repair>=0.47.8",
+    "loguru>=0.7.3",
     "notebook>=7.4.4",
     "prettytable>=3.16.0",
     "pydantic>=2.11.7",
@@ -18,14 +20,29 @@ dependencies = [
     "torchvision>=0.22.1",
     "tqdm>=4.67.1",
     "transformers>=4.53.2",
+    "zhipuai>=2.1.5.20250717",
 ]
 
 [dependency-groups]
 dev = [
     "icecream>=2.1.5",
-    "notebook>=7.4.4",
 ]
 
 [[tool.uv.index]]
 url = "https://mirrors.aliyun.com/pypi/simple/"
 default = true
+
+[[tool.uv.index]]
+name = "pytorch-cu118"
+url = "https://download.pytorch.org/whl/cu118"
+explicit = true
+
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cu118", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchvision = [
+    { index = "pytorch-cu118", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+

@@ -14,7 +14,6 @@ class DataSettings(BaseSettings):
     test: str | None = None
     batch_size: int = 32
     num_workers: int = 4
-    tokenizer: str | None = None
 
     @field_validator("train")
     @classmethod
@@ -36,21 +35,9 @@ class DataSettings(BaseSettings):
             path = Path(__file__).parent.parent.parent / value
         return str(path.resolve())
 
-    @field_validator("tokenizer")
-    @classmethod
-    def tokenizer_validator(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        path = Path(value)
-        if not path.is_absolute():
-            path = Path(__file__).parent.parent.parent / value
-        path = path.resolve()
-        return str(path.resolve()) if path.exists() else value
-
 
 # noinspection PyNestedDecorators
 class ModelSettings(BaseSettings):
-    bert: str | None = None
     max_length: int = 32
     window_size: int = 2
     d_model: int = 512
@@ -59,23 +46,13 @@ class ModelSettings(BaseSettings):
     dim_feedforward: int = 2048
     dropout: float = 0.1
 
-    @field_validator("bert")
-    @classmethod
-    def dir_validator(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        path = Path(value)
-        if not path.is_absolute():
-            path = Path(__file__).parent.parent.parent / value
-        path = path.resolve()
-        return str(path.resolve()) if path.exists() else value
-
 
 # noinspection PyNestedDecorators
 class LogSettings(BaseSettings):
-    dir: str | None = None
+    log_dir: str | None = None
+    model_dir: str | None = None
 
-    @field_validator("dir")
+    @field_validator("log_dir")
     @classmethod
     def dir_validator(cls, value: str | None) -> str | None:
         if value is None:
@@ -85,10 +62,23 @@ class LogSettings(BaseSettings):
             path = Path(__file__).parent.parent.parent / value
         return str(path.resolve())
 
+    @field_validator("model_dir")
+    @classmethod
+    def model_dir_validator(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        path = Path(value)
+        if not path.is_absolute():
+            path = Path(__file__).parent.parent.parent / value
+        return str(path.resolve())
+
 
 class TrainSettings(BaseSettings):
-    lr: float = 1e-5
     device: str = "cuda"
+    epochs: int = 100
+    seed: int = 200
+    lr: float = 1e-5
+    weight_decay: float = 1e-5
 
 
 class Settings(BaseSettings):

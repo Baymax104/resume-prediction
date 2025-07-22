@@ -1,14 +1,12 @@
-debug: true
+debug: false
 
 data:
   train: ./data/train.json
   test:
   batch_size: 32
   num_workers: 4
-  tokenizer: ./model/bert-base-chinese
 
 model:
-  bert: ./model/bert-base-chinese
   max_length: 32
   window_size: 2
   d_model: 512
@@ -18,8 +16,12 @@ model:
   dropout: 0.1
 
 log:
-  dir: ./logs
+  log_dir: ./logs
+  model_dir: ./model
 
 train:
-  lr: 1e-5
   device: cuda
+  epochs: 20
+  seed: 200
+  lr: 5e-5
+  weight_decay: 1e-5

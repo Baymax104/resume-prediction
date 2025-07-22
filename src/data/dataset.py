@@ -7,22 +7,26 @@ from typing import Literal
 
 import torch
 from torch.utils.data import Dataset
-from transformers import BertTokenizer
+from transformers import AutoTokenizer, BertTokenizer
 
-from setting import SettingManager, Settings
+from setting import Settings
 
 
 class ResumeDataset(Dataset):
 
-    def __init__(self, split: Literal["train", "test"]):
+    def __init__(self, split: Literal["train", "test"], settings: Settings):
         self.split = split
-        settings = SettingManager.get_settings()
+        self.settings = settings
         self.max_length = settings.model.max_length
         self.window_size = settings.model.window_size
         data = self.__load_data(settings)
         self.origin_length = len(data)
         self.data = self.__split_and_flatten_data(data)
-        self.tokenizer = BertTokenizer.from_pretrained(settings.data.tokenizer)
+        model_dir = Path(__file__).parent.parent.parent / "model"
+        bert_path = model_dir / "bert-base-chinese"
+        bge_path = model_dir / "bge-large-zh-v1.5"
+        self.tokenizer = BertTokenizer.from_pretrained(bert_path.resolve(), use_fast=True)
+        self.target_tokenizer = AutoTokenizer.from_pretrained(bge_path.resolve(), use_fast=True)
 
     def __load_data(self, settings: Settings) -> list[dict]:
         if self.split == "train":
@@ -75,16 +79,20 @@ class ResumeDataset(Dataset):
         # extract features
         time_features = self.__extract_time_features(times)
         resume_features = self.__extract_resume_features(resumes)
+        target_feature = self.__extract_target_features(target)
 
         # convert to tensor
         time_features = torch.tensor(time_features, dtype=torch.float)  # (window_size, 1)
         resume_input_ids = resume_features["input_ids"]  # (window_size, seq_len)
         resume_attention_mask = resume_features["attention_mask"]  # (window_size, seq_len)
+        target_input_ids = target_feature["input_ids"].squeeze()  # (seq_len,)
+        target_attention_mask = target_feature["attention_mask"].squeeze()  # (seq_len,)
         return {
             "window_time_features": time_features,
             "window_resume_input_ids": resume_input_ids,
             "window_resume_attention_mask": resume_attention_mask,
-            "target_resume": target
+            "target_resume_input_ids": target_input_ids,
+            "target_resume_attention_mask": target_attention_mask,
         }
 
     def __extract_time_features(self, times: list[str]) -> list[list[int]]:
@@ -114,8 +122,18 @@ class ResumeDataset(Dataset):
             max_length=self.max_length,
             return_tensors="pt",
         )
-
         return resume_features
+
+    def __extract_target_features(self, target_resume: str):
+        # (1, seq_len)
+        target_feature = self.target_tokenizer.encode_plus(
+            text=target_resume,
+            padding="max_length",
+            truncation=True,
+            max_length=self.max_length,
+            return_tensors="pt",
+        )
+        return target_feature
 
     def __len__(self):
         return len(self.data)

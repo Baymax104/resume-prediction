@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import torch
+from matplotlib import pyplot as plt
 from prettytable import PrettyTable
 
 from setting import Settings
@@ -37,6 +38,17 @@ class Recorder:
         print(self.prettytable)
         if clean:
             self.prettytable.clear_rows()
+
+    def plot(self):
+        for metric, values in self.record_dict.items():
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.set_title(metric)
+            ax.set_xlabel("Epoch")
+            ax.set_ylabel(metric)
+            ax.plot(values)
+            log_path = self.log_dir / f"{metric}.jpg"
+            plt.savefig(log_path)
 
     def keys(self) -> list[str]:
         return list(self.record_dict.keys())

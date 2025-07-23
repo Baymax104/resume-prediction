@@ -26,7 +26,7 @@ class ResumeDataset(Dataset):
         bert_path = model_dir / "bert-base-chinese"
         bge_path = model_dir / "bge-large-zh-v1.5"
         self.tokenizer = BertTokenizer.from_pretrained(bert_path.resolve(), use_fast=True)
-        self.target_tokenizer = AutoTokenizer.from_pretrained(bge_path.resolve(), use_fast=True)
+        self.embedding_tokenizer = AutoTokenizer.from_pretrained(bge_path.resolve(), use_fast=True)
 
     def __load_data(self, settings: Settings) -> list[dict]:
         if self.split == "train":
@@ -82,13 +82,13 @@ class ResumeDataset(Dataset):
         target_feature = self.__extract_target_features(target)
 
         # convert to tensor
-        time_features = torch.tensor(time_features, dtype=torch.float)  # (window_size, 1)
+        resume_time = torch.tensor(time_features, dtype=torch.float)  # (window_size, 1)
         resume_input_ids = resume_features["input_ids"]  # (window_size, seq_len)
         resume_attention_mask = resume_features["attention_mask"]  # (window_size, seq_len)
         target_input_ids = target_feature["input_ids"].squeeze()  # (seq_len,)
         target_attention_mask = target_feature["attention_mask"].squeeze()  # (seq_len,)
         return {
-            "window_time_features": time_features,
+            "window_resume_time": resume_time,
             "window_resume_input_ids": resume_input_ids,
             "window_resume_attention_mask": resume_attention_mask,
             "target_resume_input_ids": target_input_ids,
@@ -126,7 +126,7 @@ class ResumeDataset(Dataset):
 
     def __extract_target_features(self, target_resume: str):
         # (1, seq_len)
-        target_feature = self.target_tokenizer.encode_plus(
+        target_feature = self.embedding_tokenizer.encode_plus(
             text=target_resume,
             padding="max_length",
             truncation=True,

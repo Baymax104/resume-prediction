@@ -4,7 +4,7 @@ data:
   train: ./data/train.json
   test:
   batch_size: 32
-  num_workers: 4
+  num_workers: 8
 
 model:
   max_length: 32
@@ -21,7 +21,7 @@ log:
 
 train:
   device: cuda
-  epochs: 20
+  epochs: 50
   seed: 200
-  lr: 5e-5
+  lr: 1e-4
   weight_decay: 1e-5

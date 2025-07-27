@@ -19,9 +19,13 @@ class ResumeDataset(Dataset):
         self.settings = settings
         self.max_length = settings.model.max_length
         self.window_size = settings.model.window_size
+
         data = self.__load_data(settings)
         self.origin_length = len(data)
         self.data = self.__split_and_flatten_data(data)
+        if settings.debug:
+            self.data = self.data[:settings.data.batch_size]
+
         model_dir = Path(__file__).parent.parent.parent / "model"
         bert_path = model_dir / "bert-base-chinese"
         bge_path = model_dir / "bge-large-zh-v1.5"
@@ -99,9 +103,9 @@ class ResumeDataset(Dataset):
         time_features = []
         for time in times:
             start, end = time.split("-", 1)
-            # skip last resume
+            # current date
             if end.strip() in ["", "至今"]:
-                continue
+                end = datetime.now().strftime("%Y.%m")
 
             start_year, start_month = map(int, re.findall(r"\d+", start))
             start_time = datetime(start_year, start_month, 1)

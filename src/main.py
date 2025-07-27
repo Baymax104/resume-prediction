@@ -15,6 +15,7 @@ def train(settings: Settings):
     dataset = ResumeDataset("train", settings)
     loader = ResumeDataLoader(dataset)
     device = settings.train.device if not settings.debug and torch.cuda.is_available() else "cpu"
+    epochs = settings.train.epochs if not settings.debug else 1
 
     model = ResumePredictor(
         d_model=settings.model.d_model,
@@ -38,9 +39,9 @@ def train(settings: Settings):
 
     model.train()
     print('=' * 50 + f'Training in {device}' + '=' * 50)
-    for e in range(1, settings.train.epochs + 1):
+    for e in range(1, epochs + 1):
         train_loss = 0.
-        for batch in tqdm(loader, desc=f'Training Epoch [{e}/{settings.train.epochs}]', colour='green'):
+        for batch in tqdm(loader, desc=f'Training Epoch [{e}/{epochs}]', colour='green'):
             window_resume_time = batch["window_resume_time"].to(device)
             window_resume_input_ids = batch["window_resume_input_ids"].to(device)
             window_resume_attention_mask = batch["window_resume_attention_mask"].to(device)
@@ -73,9 +74,10 @@ def train(settings: Settings):
             recorder.print(clean=True)
 
     print(f"Training [Loss]: {min(recorder["loss"])}")
-    recorder.plot()
-    print('Saving model...')
-    save_model(model, "resume-predictor", settings.log.log_dir)
+    if not settings.debug:
+        recorder.plot()
+        print('Saving model...')
+        save_model(model, "resume-predictor", settings.log.log_dir)
     print("Done!")
 
 

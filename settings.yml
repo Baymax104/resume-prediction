@@ -2,8 +2,8 @@ debug: false
 
 data:
   train: ./data/train.json
-  test:
-  batch_size: 32
+  test: ./data/test.json
+  batch_size: 64
   num_workers: 8
 
 model:
@@ -21,7 +21,7 @@ log:
 
 train:
   device: cuda
-  epochs: 50
+  epochs: 20
   seed: 200
   lr: 1e-4
   weight_decay: 1e-5

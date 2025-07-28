@@ -1,4 +1,5 @@
 # -*- coding: UTF-8 -*-
+import time
 from pathlib import Path
 from typing import Any, Literal
 
@@ -47,7 +48,7 @@ class Recorder:
             ax.set_xlabel("Epoch")
             ax.set_ylabel(metric)
             ax.plot(values)
-            log_path = self.log_dir / f"{metric}.jpg"
+            log_path = self.log_dir / f"{metric}-{time.strftime("%Y%m%d-%H%M%S")}.jpg"
             plt.savefig(log_path)
 
     def keys(self) -> list[str]:

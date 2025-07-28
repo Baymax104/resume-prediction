@@ -14,6 +14,6 @@ class ResumeDataLoader(DataLoader):
             dataset=dataset,
             batch_size=data_settings.batch_size,
             shuffle=(dataset.split == "train" and not debug),
-            num_workers=data_settings.num_workers if not debug else 0,
+            num_workers=data_settings.num_workers,
             pin_memory=(not debug)
         )

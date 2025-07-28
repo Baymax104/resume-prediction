@@ -16,7 +16,6 @@ dependencies = [
     "pydantic>=2.11.7",
     "python-dateutil>=2.9.0.post0",
     "requests>=2.32.4",
-    "ruamel-yaml>=0.18.14",
     "scikit-learn>=1.7.0",
     "torch>=2.7.1",
     "torchmetrics>=1.7.4",
@@ -29,6 +28,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "icecream>=2.1.5",
+    "pytest>=8.4.1",
 ]
 
 [[tool.uv.index]]

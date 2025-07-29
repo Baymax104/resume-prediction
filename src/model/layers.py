@@ -19,6 +19,13 @@ class TimeEncoder(nn.Module):
         )
 
     def forward(self, x):
+        """
+        Args:
+            x: (batch_size, *, input_dim)
+
+        Returns:
+            output: (batch_size, *, output_dim)
+        """
         return self.mlp(x)
 
 
@@ -35,9 +42,12 @@ class ResumeEncoder(nn.Module):
 
     def forward(self, input_ids, attention_mask):
         """
-        Shape:
+        Args:
             input_ids: (batch_size, window_size, seq_len)
             attention_mask: (batch_size, window_size, seq_len)
+
+        Returns:
+            output: (batch_size, window_size, output_dim)
         """
         batch_size, window_size, seq_len = input_ids.size()
         input_ids = input_ids.view(batch_size * window_size, seq_len)
@@ -48,13 +58,35 @@ class ResumeEncoder(nn.Module):
         return outputs.view(batch_size, window_size, -1)
 
 
+class Decoder(nn.Module):
+
+    def __init__(self, input_dim: int, hidden_dim: int, output_dim: int):
+        super(Decoder, self).__init__()
+        self.mlp = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, output_dim),
+            nn.ReLU(),
+        )
+
+    def forward(self, x):
+        """
+        Args:
+            x: (batch_size, *, input_dim)
+
+        Returns:
+            output: (batch_size, *, output_dim)
+        """
+        return self.mlp(x)
+
+
 class PositionalEncoding(nn.Module):
 
     def __init__(
         self,
-        d_model,
-        window_size,
-        dropout=0.1,
+        d_model: int,
+        window_size: int,
+        dropout: float = 0.1,
     ):
         super(PositionalEncoding, self).__init__()
         self.window_size = window_size
@@ -78,16 +110,58 @@ class PositionalEncoding(nn.Module):
         weights = weights.view(1, window_size, 1)
         return weights
 
-    def forward(self, x, time_features):
-        r"""
-        Shape:
-            x: (batch_size, window_size, emb_dim)
-            time_features: (batch_size, window_size, 1)
-            output: (batch_size, window_size, emb_dim)
+    def __get_time_weights(self, resume_time):
+        sums = torch.sum(resume_time, dim=1, keepdim=True)
+        sums = torch.where(sums == 0, torch.ones_like(sums) * 1e-8, sums)
+        time_weights = resume_time / sums
+        return time_weights
+
+    def forward(self, x, resume_time):
         """
-        time_weights = torch.clamp(time_features, min=0, max=120) / 120
-        time_weights = time_weights / time_weights.sum()
+        Args:
+            x: (batch_size, window_size, d_model)
+            resume_time: (batch_size, window_size, 1)
+
+        Returns:
+            output: (batch_size, window_size, d_model)
+        """
+        time_weights = self.__get_time_weights(resume_time)
         weights = self.position_weights * time_weights
         weighted_pe = self.pe * weights
         x = x + weighted_pe[:, :x.size(1)]
         return self.dropout(x)
+
+
+class TransformerModel(nn.Module):
+
+    def __init__(
+        self,
+        d_model: int = 512,
+        num_heads: int = 8,
+        num_layers: int = 6,
+        dim_feedforward: int = 2048,
+        window_size: int = 2,
+        dropout: float = 0.1,
+    ):
+        super(TransformerModel, self).__init__()
+        self.position_encoding = PositionalEncoding(d_model, window_size, dropout)
+        transformer_layer = nn.TransformerEncoderLayer(
+            d_model=d_model,
+            nhead=num_heads,
+            dim_feedforward=dim_feedforward,
+            batch_first=True
+        )
+        self.transformer = nn.TransformerEncoder(transformer_layer, num_layers=num_layers)
+
+    def forward(self, x, resume_time):
+        """
+        Args:
+            x: (batch_size, window_size, d_model)
+            resume_time: (batch_size, window_size, 1)
+
+        Returns:
+            output: (batch_size, window_size, d_model)
+        """
+        x = self.position_encoding(x, resume_time)
+        x = self.transformer(x)
+        return x

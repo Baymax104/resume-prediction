@@ -3,7 +3,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from model.layers import PositionalEncoding, ResumeEncoder, TimeEncoder
+from model.layers import Decoder, ResumeEncoder, TimeEncoder, TransformerModel
 
 
 class ResumePredictor(nn.Module):
@@ -23,25 +23,27 @@ class ResumePredictor(nn.Module):
         self.resume_encoder = ResumeEncoder(output_dim=d_model)
         self.dropout = nn.Dropout(p=dropout)
         self.projection = nn.Linear(d_model * 2, d_model)
-        self.position_encoding = PositionalEncoding(d_model, window_size=window_size, dropout=dropout)
-
-        transformer_layer = nn.TransformerEncoderLayer(
+        self.transformer = TransformerModel(
             d_model=d_model,
-            nhead=num_heads,
+            num_heads=num_heads,
             dim_feedforward=dim_feedforward,
-            batch_first=True
+            num_layers=num_layers,
+            window_size=window_size,
+            dropout=dropout,
         )
-        self.transformer = nn.TransformerEncoder(transformer_layer, num_layers=num_layers)
+
         self.pool = nn.AdaptiveAvgPool1d(output_size=1)
-        self.decoder = nn.Linear(d_model, embedding_dim)
+        self.decoder = Decoder(input_dim=d_model, hidden_dim=2048, output_dim=embedding_dim)
 
     def forward(self, input_ids, attention_mask, resume_time):
         """
-        Shape:
+        Args:
             input_ids: (batch_size, window_size, seq_len)
             attention_mask: (batch_size, window_size, seq_len)
-            time_features: (batch_size, window_size, 1)
-            output: (batch_size, output_dim)
+            resume_time: (batch_size, window_size, 1)
+
+        Returns:
+            output: (batch_size, embedding_dim)
         """
 
         # (batch_size, window_size, d_model)
@@ -56,11 +58,10 @@ class ResumePredictor(nn.Module):
         fuse_features = self.projection(fuse_features)
         fuse_features = F.relu(fuse_features)
         fuse_features = self.dropout(fuse_features)
-        fuse_features = self.position_encoding(fuse_features, time_features)
-        fuse_features = self.transformer(fuse_features)
+        fuse_features = self.transformer(fuse_features, resume_time)
 
         # mean pool for window_size dimension
         fuse_features = fuse_features.transpose(1, 2)  # (batch_size, d_model, window_size)
         fuse_features = self.pool(fuse_features).squeeze(-1)  # (batch_size, d_model)
-        fuse_features = self.decoder(fuse_features)  # (batch_size, output_dim)
+        fuse_features = self.decoder(fuse_features)  # (batch_size, embedding_dim)
         return fuse_features

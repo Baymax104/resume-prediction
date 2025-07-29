@@ -20,7 +20,7 @@ development:
 
   train:
     device: cpu
-    epochs: 1
+    epochs: 2
     seed: 200
     lr: 1e-4
     weight_decay: 1e-5

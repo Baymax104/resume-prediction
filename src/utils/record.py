@@ -7,7 +7,7 @@ import torch
 from matplotlib import pyplot as plt
 from prettytable import PrettyTable
 
-from setting import Settings
+from setting.models import Settings
 
 
 class Recorder:

@@ -28,8 +28,10 @@ class ResumeEncoder(nn.Module):
         super().__init__()
         bert_path = Path(__file__).parent.parent.parent / "model" / "bert-base-chinese"
         self.bert = BertModel.from_pretrained(bert_path.resolve())
+        for parameter in self.bert.parameters():
+            parameter.requires_grad = False
         self.projection = nn.Linear(768, output_dim)
-        self.dropout = nn.Dropout(p=0.4)
+        self.dropout = nn.Dropout(p=0.3)
 
     def forward(self, input_ids, attention_mask):
         """
@@ -72,7 +74,7 @@ class PositionalEncoding(nn.Module):
     def __position_weights(self, window_size: int):
         positions = torch.arange(window_size, dtype=torch.float)
         weights = positions + 1
-        weights = weights / (weights.max() + 1e-8)
+        weights = weights / weights.sum()
         weights = weights.view(1, window_size, 1)
         return weights
 
@@ -84,6 +86,7 @@ class PositionalEncoding(nn.Module):
             output: (batch_size, window_size, emb_dim)
         """
         time_weights = torch.clamp(time_features, min=0, max=120) / 120
+        time_weights = time_weights / time_weights.sum()
         weights = self.position_weights * time_weights
         weighted_pe = self.pe * weights
         x = x + weighted_pe[:, :x.size(1)]

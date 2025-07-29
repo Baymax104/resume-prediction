@@ -1,14 +1,13 @@
 # -*- coding: UTF-8 -*-
-import os
-
 from dynaconf import Dynaconf
 
 from setting.models import *
+from utils import get_env
 
 
 class SettingManager:
     context_root: Path = Path(__file__).parent.parent.parent
-    env = os.getenv("ENV", "development")
+    env = get_env()
     source: Dynaconf = Dynaconf(
         root_path=context_root,
         settings_files=["settings.*.yml", ".secrets.*"],

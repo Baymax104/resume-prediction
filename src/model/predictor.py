@@ -1,6 +1,7 @@
 # -*- coding: UTF-8 -*-
 import torch
 from torch import nn
+from torch.nn import functional as F
 
 from model.layers import PositionalEncoding, ResumeEncoder, TimeEncoder
 
@@ -18,7 +19,7 @@ class ResumePredictor(nn.Module):
         dropout: float = 0.1,
     ):
         super(ResumePredictor, self).__init__()
-        self.time_encoder = TimeEncoder(input_dim=1, hidden_dim=64, output_dim=d_model)
+        self.time_encoder = TimeEncoder(input_dim=1, hidden_dim=256, output_dim=d_model)
         self.resume_encoder = ResumeEncoder(output_dim=d_model)
         self.dropout = nn.Dropout(p=dropout)
         self.projection = nn.Linear(d_model * 2, d_model)
@@ -50,10 +51,11 @@ class ResumePredictor(nn.Module):
 
         # (batch_size, window_size, d_model * 2)
         fuse_features = torch.cat([time_features, resume_features], dim=-1)
-        fuse_features = self.dropout(fuse_features)
 
         # (batch_size, window_size, d_model)
         fuse_features = self.projection(fuse_features)
+        fuse_features = F.relu(fuse_features)
+        fuse_features = self.dropout(fuse_features)
         fuse_features = self.position_encoding(fuse_features, time_features)
         fuse_features = self.transformer(fuse_features)
 

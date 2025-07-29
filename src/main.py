@@ -1,6 +1,7 @@
 # -*- coding: UTF-8 -*-
 import torch
 from torch import nn, optim
+from torch.nn import functional as F
 from torchmetrics import MeanSquaredError, MetricCollection
 from tqdm import tqdm
 
@@ -60,6 +61,9 @@ def train(settings: Settings):
             )
 
             target_labels = torch.ones(result_embedding.size(0), dtype=torch.float).to(device)
+
+            result_embedding = F.normalize(result_embedding, dim=1)
+            target_embedding = F.normalize(target_embedding, dim=1)
 
             loss = criterion(result_embedding, target_embedding, target_labels)
             train_loss += loss.item()

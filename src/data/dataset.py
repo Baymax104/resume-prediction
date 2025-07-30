@@ -2,7 +2,6 @@
 import json
 import re
 from datetime import datetime
-from pathlib import Path
 from typing import Literal
 
 import torch
@@ -17,6 +16,7 @@ class ResumeDataset(Dataset):
     def __init__(self, split: Literal["train", "test"], settings: Settings):
         self.split = split
         self.settings = settings
+        self.batch_size = settings.data.batch_size
         self.max_length = settings.model.max_length
         self.window_size = settings.model.window_size
 
@@ -24,9 +24,9 @@ class ResumeDataset(Dataset):
         self.origin_length = len(data)
         self.data = self.__split_and_flatten_data(data)
         if settings.debug:
-            self.data = self.data[:settings.data.batch_size]
+            self.data = self.data[:self.batch_size]
 
-        model_dir = Path(__file__).parent.parent.parent / "model"
+        model_dir = settings.model.pretrained_model_dir
         bert_path = model_dir / "bert-base-chinese"
         bge_path = model_dir / "bge-large-zh-v1.5"
         self.tokenizer = BertTokenizer.from_pretrained(bert_path.resolve(), use_fast=True)
@@ -39,20 +39,9 @@ class ResumeDataset(Dataset):
             data_path = settings.data.test
         else:
             raise NotImplementedError
-        if not data_path:
+        if not data_path or not data_path.is_file():
             raise ValueError(f"Dataset path is empty")
-        data_path = Path(data_path)
-        if not data_path.is_file():
-            raise ValueError(f"Dataset path is not a file")
-        with data_path.open("r", encoding="utf-8") as f:
-            data = json.load(f)
-        # validate
-        if not isinstance(data, list):
-            raise ValueError(f"Data must be a list")
-        if not all(isinstance(d, dict) for d in data):
-            raise ValueError(f"Data item must be a dict")
-        if not all("resumes" in d for d in data):
-            raise ValueError(f"Data item must have 'resumes' key")
+        data = json.load(data_path.open("r", encoding="utf-8"))
         return data
 
     def __split_and_flatten_data(self, data: list[dict]) -> list[tuple]:

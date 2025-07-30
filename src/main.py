@@ -1,8 +1,6 @@
 # -*- coding: UTF-8 -*-
 import torch
 from torch import nn, optim
-from torch.nn import functional as F
-from torchmetrics import MeanSquaredError, MetricCollection
 from tqdm import tqdm
 
 from data import ResumeDataLoader, ResumeDataset
@@ -19,10 +17,7 @@ def train(settings: Settings):
 
     model = ResumePredictor(
         d_model=settings.model.d_model,
-        num_heads=settings.model.num_heads,
         num_layers=settings.model.num_layers,
-        dim_feedforward=settings.model.dim_feedforward,
-        window_size=settings.model.window_size,
         dropout=settings.model.dropout,
         embedding_dim=1024,
     ).to(device)
@@ -35,8 +30,7 @@ def train(settings: Settings):
         weight_decay=settings.train.weight_decay
     )
     criterion = nn.CosineEmbeddingLoss()
-    metrics = MetricCollection({"mse": MeanSquaredError()}).to(device)
-    recorder = Recorder(["loss", "mse"], mode="train", settings=settings)
+    recorder = Recorder(["loss"], mode="train", log_dir=settings.log.log_dir)
 
     model.train()
     print('=' * 50 + f' Training in {device} ' + '=' * 50)
@@ -62,28 +56,21 @@ def train(settings: Settings):
 
             target_labels = torch.ones(result_embedding.size(0), dtype=torch.float).to(device)
 
-            result_embedding = F.normalize(result_embedding, dim=1)
-            target_embedding = F.normalize(target_embedding, dim=1)
-
             loss = criterion(result_embedding, target_embedding, target_labels)
             train_loss += loss.item()
-            metrics.update(result_embedding, target_embedding)
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
         train_loss /= len(loader)
-        train_metrics = metrics.compute()
-        train_metrics["loss"] = train_loss
+        train_metrics = {"loss": train_loss}
         recorder.add_record(train_metrics)
-        metrics.reset()
 
         if e % 5 == 0:
             recorder.print(clean=True)
 
-    print(f"Training [Loss]: {min(recorder['loss'])}")
-    print(f"Training [MSE]: {min(recorder['mse'])}")
+    print(f"Train [Loss]: {min(recorder['loss'])}")
     if not settings.debug:
         recorder.plot()
         print('Saving model...')

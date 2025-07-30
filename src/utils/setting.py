@@ -1,5 +1,8 @@
 # -*- coding: UTF-8 -*-
 import os
+from pathlib import Path
+
+from pydantic import AfterValidator
 
 
 def get_env() -> str:
@@ -11,3 +14,14 @@ def get_env() -> str:
     else:
         env = "development"
     return env
+
+
+def absolute_path(path: Path | None) -> Path | None:
+    if path is None:
+        return None
+    if path.is_absolute():
+        return path
+    return (Path(__file__).parent.parent.parent / path).resolve()
+
+
+AbsolutePath = AfterValidator(absolute_path)

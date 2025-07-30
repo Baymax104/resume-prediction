@@ -7,16 +7,13 @@ import torch
 from matplotlib import pyplot as plt
 from prettytable import PrettyTable
 
-from setting.models import Settings
-
 
 class Recorder:
 
-    def __init__(self, metrics: list[str], mode: Literal["train", "test"], settings: Settings):
+    def __init__(self, metrics: list[str], mode: Literal["train", "test"], log_dir: Path):
         self.metrics = metrics
         self.mode = mode
-        self.settings = settings
-        self.log_dir = Path(settings.log.log_dir)
+        self.log_dir = log_dir
         self.train = self.mode != "test"
         field_names = (["Epoch"] if self.train else []) + [metric.title() for metric in self.metrics]
         self.prettytable = PrettyTable(field_names=field_names)

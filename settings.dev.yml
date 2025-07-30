@@ -6,17 +6,15 @@ development:
     num_workers: 0
 
   model:
-    max_length: 32
+    pretrained_model_dir: ./model
+    max_length: 64
     window_size: 2
     d_model: 512
-    num_heads: 8
     num_layers: 6
-    dim_feedforward: 2048
     dropout: 0.1
 
   log:
     log_dir: ./logs
-    model_dir: ./model
 
   train:
     device: cpu

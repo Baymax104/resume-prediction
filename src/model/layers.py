@@ -1,10 +1,12 @@
 # -*- coding: UTF-8 -*-
 import math
-from pathlib import Path
 
 import torch
 from torch import nn
+from torch.nn import functional as F
 from transformers import BertModel
+
+from setting import SettingManager
 
 
 class TimeEncoder(nn.Module):
@@ -33,7 +35,8 @@ class ResumeEncoder(nn.Module):
 
     def __init__(self, output_dim: int):
         super().__init__()
-        bert_path = Path(__file__).parent.parent.parent / "model" / "bert-base-chinese"
+        settings = SettingManager.get_settings()
+        bert_path = settings.model.pretrained_model_dir / "bert-base-chinese"
         self.bert = BertModel.from_pretrained(bert_path.resolve())
         for parameter in self.bert.parameters():
             parameter.requires_grad = False
@@ -80,56 +83,51 @@ class Decoder(nn.Module):
         return self.mlp(x)
 
 
-class PositionalEncoding(nn.Module):
+class SinusoidalPositionalEncoding(nn.Module):
 
-    def __init__(
-        self,
-        d_model: int,
-        window_size: int,
-        dropout: float = 0.1,
-    ):
-        super(PositionalEncoding, self).__init__()
-        self.window_size = window_size
+    def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 10):
+        super(SinusoidalPositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
 
-        pe = torch.zeros(window_size, d_model)
-        position = torch.arange(0, window_size, dtype=torch.float).unsqueeze(1)
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0)
         # (1, window_size, d_model)
         self.register_buffer('pe', pe)
-        # (1, window_size, 1)
-        self.register_buffer('position_weights', self.__position_weights(window_size))
 
-    def __position_weights(self, window_size: int):
-        positions = torch.arange(window_size, dtype=torch.float)
-        weights = positions + 1
-        weights = weights / weights.sum()
-        weights = weights.view(1, window_size, 1)
-        return weights
-
-    def __get_time_weights(self, resume_time):
-        sums = torch.sum(resume_time, dim=1, keepdim=True)
-        sums = torch.where(sums == 0, torch.ones_like(sums) * 1e-8, sums)
-        time_weights = resume_time / sums
-        return time_weights
-
-    def forward(self, x, resume_time):
+    def forward(self, x):
         """
         Args:
             x: (batch_size, window_size, d_model)
-            resume_time: (batch_size, window_size, 1)
 
         Returns:
             output: (batch_size, window_size, d_model)
         """
-        time_weights = self.__get_time_weights(resume_time)
-        weights = self.position_weights * time_weights
-        weighted_pe = self.pe * weights
-        x = x + weighted_pe[:, :x.size(1)]
+        x = x + self.pe[:, :x.size(1)]
         return self.dropout(x)
+
+
+class ParameterPositionalEncoding(nn.Module):
+
+    def __init__(self, d_model: int, window_size: int, dropout: float = 0.1):
+        super(ParameterPositionalEncoding, self).__init__()
+        self.pe = nn.Parameter(torch.zeros(1, window_size, d_model))
+        self.dropout = nn.Dropout(p=dropout)
+
+    def forward(self, x):
+        """
+        Args:
+            x: (batch_size, window_size, d_model)
+
+        Returns:
+            output: (batch_size, window_size, d_model)
+        """
+        x = x + self.pe[:, :x.size(1)]
+        return self.dropout(x)
+
 
 
 class TransformerModel(nn.Module):
@@ -140,11 +138,10 @@ class TransformerModel(nn.Module):
         num_heads: int = 8,
         num_layers: int = 6,
         dim_feedforward: int = 2048,
-        window_size: int = 2,
         dropout: float = 0.1,
     ):
         super(TransformerModel, self).__init__()
-        self.position_encoding = PositionalEncoding(d_model, window_size, dropout)
+        self.position_encoding = SinusoidalPositionalEncoding(d_model, dropout)
         transformer_layer = nn.TransformerEncoderLayer(
             d_model=d_model,
             nhead=num_heads,
@@ -153,15 +150,65 @@ class TransformerModel(nn.Module):
         )
         self.transformer = nn.TransformerEncoder(transformer_layer, num_layers=num_layers)
 
-    def forward(self, x, resume_time):
+    def forward(self, x):
         """
         Args:
             x: (batch_size, window_size, d_model)
-            resume_time: (batch_size, window_size, 1)
 
         Returns:
             output: (batch_size, window_size, d_model)
         """
-        x = self.position_encoding(x, resume_time)
+        x = self.position_encoding(x)
         x = self.transformer(x)
         return x
+
+
+class AttentionPooling(nn.Module):
+
+    def __init__(self, embedding_dim: int):
+        super(AttentionPooling, self).__init__()
+        self.attention = nn.Linear(embedding_dim, 1)
+
+    def forward(self, x):
+        """
+        Args:
+            x: (batch_size, window_size, embedding_dim)
+
+        Returns:
+            output: (batch_size, embedding_dim)
+        """
+        # (batch_size, window_size, 1)
+        attention_scores = self.attention(x)
+        attention_scores = F.softmax(attention_scores, dim=1)
+
+        # (batch_size, embedding_dim)
+        output = torch.sum(x * attention_scores, dim=1)
+        return output
+
+
+class LSTMModel(nn.Module):
+
+    def __init__(self, input_dim: int, hidden_dim: int, num_layers: int = 1):
+        super(LSTMModel, self).__init__()
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.num_layers = num_layers
+        self.lstm = nn.LSTM(
+            input_size=input_dim,
+            hidden_size=hidden_dim,
+            num_layers=num_layers,
+            batch_first=True,
+        )
+
+    def forward(self, x):
+        """
+        Args:
+            x: (batch_size, window_size, input_dim)
+
+        Returns:
+            output: (batch_size, window_size, hidden_dim)
+        """
+        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)
+        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)
+        output, _ = self.lstm(x, (h0, c0))
+        return output

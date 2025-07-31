@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "accelerate>=1.9.0",
     "dynaconf>=3.2.11",
     "huggingface-hub[cli]>=0.33.4",
     "json-repair>=0.47.8",

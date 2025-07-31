@@ -6,7 +6,7 @@ from tqdm import tqdm
 from data import ResumeDataLoader, ResumeDataset
 from model import ResumeEmbedding, ResumePredictor
 from setting import SettingManager, Settings
-from utils import Recorder, save_model, set_seed
+from utils import Recorder, log_train_settings, save_model, set_seed
 
 
 def train(settings: Settings):
@@ -16,10 +16,9 @@ def train(settings: Settings):
     epochs = settings.train.epochs
 
     model = ResumePredictor(
-        d_model=settings.model.d_model,
-        num_layers=settings.model.num_layers,
+        hidden_dim=settings.model.d_model,
         dropout=settings.model.dropout,
-        embedding_dim=1024,
+        output_dim=1024,
     ).to(device)
 
     target_embedder = ResumeEmbedding().to(device)
@@ -34,19 +33,20 @@ def train(settings: Settings):
 
     model.train()
     print('=' * 50 + f' Training in {device} ' + '=' * 50)
+    log_train_settings(settings)
     for e in range(1, epochs + 1):
         train_loss = 0.
         for batch in tqdm(loader, desc=f'Training Epoch [{e}/{epochs}]', colour='green'):
-            window_resume_time = batch["window_resume_time"].to(device)
             window_resume_input_ids = batch["window_resume_input_ids"].to(device)
             window_resume_attention_mask = batch["window_resume_attention_mask"].to(device)
+            window_resume_token_type_ids = batch["window_resume_token_type_ids"].to(device)
             target_resume_input_ids = batch["target_resume_input_ids"].to(device)
             target_resume_attention_mask = batch["target_resume_attention_mask"].to(device)
 
             result_embedding = model(
                 input_ids=window_resume_input_ids,
                 attention_mask=window_resume_attention_mask,
-                resume_time=window_resume_time
+                token_type_ids=window_resume_token_type_ids,
             )
 
             target_embedding = target_embedder(

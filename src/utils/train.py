@@ -4,6 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from prettytable import PrettyTable
 
 
 def set_seed(seed):
@@ -27,3 +28,12 @@ def load_model(model, model_path):
         raise ValueError(f'Model {str(model_path)} does not exist.')
     state_dict = torch.load(model_path)
     model.load_state_dict(state_dict)
+
+
+def log_train_settings(settings):
+    table = PrettyTable(header=False)
+    table.add_row(["Epoch", settings.train.epochs])
+    table.add_row(["Batch Size", settings.data.batch_size])
+    table.add_row(["Learning Rate", settings.train.lr])
+    table.add_row(["Weight Decay", settings.train.weight_decay])
+    print(table)

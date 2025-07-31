@@ -2,12 +2,13 @@ production:
   data:
     train: ./data/train.json
     test: ./data/test.json
+    target: ./data/target.json
     batch_size: 64
     num_workers: 8
 
   model:
     pretrained_model_dir: ./model
-    max_length: 64
+    max_length: 128
     window_size: 2
     d_model: 1024
     num_layers: 6
@@ -18,7 +19,7 @@ production:
 
   train:
     device: cuda
-    epochs: 50
-    seed: 200
+    epochs: 100
+    seed: 400
     lr: 5e-4
     weight_decay: 1e-5

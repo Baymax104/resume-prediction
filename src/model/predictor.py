@@ -1,65 +1,43 @@
 # -*- coding: UTF-8 -*-
-import torch
 from torch import nn
+from transformers import AutoModel
 
-from model.layers import AttentionPooling, Decoder, LSTMModel, ResumeEncoder, TimeEncoder
+from setting import SettingManager
+
+
+class TextEmbedding(nn.Module):
+
+    def __init__(self, output_dim: int, dropout: float = 0.1):
+        super(TextEmbedding, self).__init__()
+        settings = SettingManager.get_settings()
+        bert_path = settings.model.pretrained_model_dir / "bert-base-chinese"
+        self.bert = AutoModel.from_pretrained(bert_path.resolve())
+        self.projection = nn.Linear(768, output_dim)
+        self.dropout = nn.Dropout(p=dropout)
+
+    def forward(self, input_ids, attention_mask, token_type_ids):
+        outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
+        x = outputs.pooler_output
+        x = self.projection(x)
+        x = self.dropout(x)
+        return x
 
 
 class ResumePredictor(nn.Module):
 
-    def __init__(
-        self,
-        d_model: int = 512,
-        num_layers: int = 6,
-        embedding_dim: int = 128,
-        dropout: float = 0.1,
-    ):
+    def __init__(self, hidden_dim: int, output_dim: int, dropout: float = 0.1):
         super(ResumePredictor, self).__init__()
-        self.time_encoder = TimeEncoder(input_dim=1, hidden_dim=256, output_dim=d_model)
-        self.resume_encoder = ResumeEncoder(output_dim=d_model)
-        self.dropout = nn.Dropout(p=dropout)
-        self.projection = nn.Sequential(
-            nn.Linear(d_model * 2, d_model),
+        self.embedding = TextEmbedding(hidden_dim, dropout)
+        self.layer_norm = nn.LayerNorm(hidden_dim)
+        self.mlp = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim * 2),
+            nn.ReLU(),
+            nn.Linear(hidden_dim * 2, output_dim),
             nn.ReLU(),
             nn.Dropout(p=dropout),
         )
-        self.lstm = LSTMModel(
-            input_dim=d_model,
-            hidden_dim=d_model,
-            num_layers=num_layers,
-        )
 
-        self.pool = AttentionPooling(embedding_dim=embedding_dim)
-        self.decoder = Decoder(input_dim=d_model, hidden_dim=2048, output_dim=embedding_dim)
-
-    def forward(self, input_ids, attention_mask, resume_time):
-        """
-        Args:
-            input_ids: (batch_size, window_size, seq_len)
-            attention_mask: (batch_size, window_size, seq_len)
-            resume_time: (batch_size, window_size, 1)
-
-        Returns:
-            output: (batch_size, embedding_dim)
-        """
-
-        # (batch_size, window_size, d_model)
-        time_features = self.time_encoder(resume_time)
-        # (batch_size, window_size, d_model)
-        resume_features = self.resume_encoder(input_ids, attention_mask)
-
-        # (batch_size, window_size, d_model * 2)
-        x = torch.cat([time_features, resume_features], dim=-1)
-
-        # (batch_size, window_size, d_model)
-        x = self.projection(x)
-        # x = self.transformer(x)
-        x = self.lstm(x)
-
-        # (batch_size, window_size, embedding_dim)
-        x = self.decoder(x)
-
-        # pool for window_size dimension
-        x = self.pool(x)  # (batch_size, embedding_dim)
-        x = self.dropout(x)
+    def forward(self, input_ids, attention_mask, token_type_ids):
+        x = self.embedding(input_ids, attention_mask, token_type_ids)
+        x = self.mlp(x)
         return x

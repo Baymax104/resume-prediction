@@ -4,9 +4,8 @@ import re
 from datetime import datetime
 from typing import Literal
 
-import torch
 from torch.utils.data import Dataset
-from transformers import AutoTokenizer, BertTokenizer
+from transformers import AutoTokenizer
 
 from setting import Settings
 
@@ -29,7 +28,7 @@ class ResumeDataset(Dataset):
         model_dir = settings.model.pretrained_model_dir
         bert_path = model_dir / "bert-base-chinese"
         bge_path = model_dir / "bge-large-zh-v1.5"
-        self.tokenizer = BertTokenizer.from_pretrained(bert_path.resolve(), use_fast=True)
+        self.tokenizer = AutoTokenizer.from_pretrained(bert_path.resolve(), use_fast=True)
         self.embedding_tokenizer = AutoTokenizer.from_pretrained(bge_path.resolve(), use_fast=True)
 
     def __load_data(self, settings: Settings) -> list[dict]:
@@ -54,36 +53,39 @@ class ResumeDataset(Dataset):
                 flatten_data.append((history, target))
         return flatten_data
 
-
     def __getitem__(self, idx):
         history, target = self.data[idx]
         history: list[str]
         target: str
 
-        # split time and resume
-        times = []
-        resumes = []
-        for resume in history:
-            time, resume = resume.split(" ", 1)
-            times.append(time.strip())
-            resumes.append(resume.strip())
-        target = target.split(" ", 1)[1].strip()
-
-        # extract features
-        time_features = self.__extract_time_features(times)
-        resume_features = self.__extract_resume_features(resumes)
+        # # split time and resume
+        # times = []
+        # resumes = []
+        # for resume in history:
+        #     time, resume = resume.split(" ", 1)
+        #     times.append(time.strip())
+        #     resumes.append(resume.strip())
+        # target = target.split(" ", 1)[1].strip()
+        #
+        # # extract features
+        # time_features = self.__extract_time_features(times)
+        # resume_features = self.__extract_resume_features(resumes)
+        # target_feature = self.__extract_target_features(target)
+        resume_features = self.__extract_resume_features(history)
         target_feature = self.__extract_target_features(target)
 
         # convert to tensor
-        resume_time = torch.tensor(time_features, dtype=torch.float)  # (window_size, 1)
-        resume_input_ids = resume_features["input_ids"]  # (window_size, seq_len)
-        resume_attention_mask = resume_features["attention_mask"]  # (window_size, seq_len)
+        # resume_time = torch.tensor(time_features, dtype=torch.float)  # (window_size, 1)
+        resume_input_ids = resume_features["input_ids"].squeeze()  # (seq_len,)
+        resume_attention_mask = resume_features["attention_mask"].squeeze()  # (seq_len,)
+        resume_token_type_ids = resume_features["token_type_ids"].squeeze()  # (seq_len,)
         target_input_ids = target_feature["input_ids"].squeeze()  # (seq_len,)
         target_attention_mask = target_feature["attention_mask"].squeeze()  # (seq_len,)
         return {
-            "window_resume_time": resume_time,
+            # "window_resume_time": resume_time,
             "window_resume_input_ids": resume_input_ids,
             "window_resume_attention_mask": resume_attention_mask,
+            "window_resume_token_type_ids": resume_token_type_ids,
             "target_resume_input_ids": target_input_ids,
             "target_resume_attention_mask": target_attention_mask,
         }
@@ -107,19 +109,21 @@ class ResumeDataset(Dataset):
         return time_features
 
     def __extract_resume_features(self, resumes: list[str]):
-        # (window_size, seq_len)
-        resume_features = self.tokenizer.batch_encode_plus(
-            batch_text_or_text_pairs=resumes,
+        # combine sentences in a window
+        # (1, seq_len)
+        resume_features = self.tokenizer(
+            [resumes],
             padding="max_length",
             truncation=True,
             max_length=self.max_length,
             return_tensors="pt",
+            return_token_type_ids=True,
         )
         return resume_features
 
     def __extract_target_features(self, target_resume: str):
         # (1, seq_len)
-        target_feature = self.embedding_tokenizer.encode_plus(
+        target_feature = self.embedding_tokenizer(
             text=target_resume,
             padding="max_length",
             truncation=True,

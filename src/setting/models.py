@@ -14,6 +14,7 @@ class BaseSettings(BaseModel):
 class DataSettings(BaseSettings):
     train: Annotated[Path | None, AbsolutePath] = None
     test: Annotated[Path | None, AbsolutePath] = None
+    target: Annotated[Path | None, AbsolutePath] = None
     batch_size: int = 32
     num_workers: int = 4
 

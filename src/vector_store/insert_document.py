@@ -1,19 +1,50 @@
 # -*- coding: UTF-8 -*-
+import json
 from pathlib import Path
+from uuid import uuid4
 
-from transformers import AutoModel, AutoTokenizer
+import requests
+import torch
+from requests import Session
+from tqdm import tqdm
 
 
-model_path = Path(__file__).parent.parent.parent / "model" / "bge-large-zh-v1.5"
-tokenizer = AutoTokenizer.from_pretrained(model_path.resolve())
-model = AutoModel.from_pretrained(model_path.resolve())
+root = Path(__file__).parent.parent.parent
 
-texts = ["Hello", "World"]
+data = torch.load(root / "data" / "embeddings.pt")
 
-encoded = tokenizer.batch_encode_plus(
-    batch_text_or_text_pairs=texts,
-    padding="max_length",
-    max_length=32,
-    truncation=True,
-    return_tensors="pt",
-)
+batch_data = [data[i:i + 10] for i in range(0, len(data), 10)]
+
+
+def generate_document(data: dict) -> str:
+    index = {
+        "index": {
+            "_index": "resumes",
+            "_id": str(uuid4()),
+        }
+    }
+    doc = {
+        "content": data["text"],
+        "content_vector": data["emb"].cpu().tolist()
+    }
+    return f"{json.dumps(index, ensure_ascii=False)}\n{json.dumps(doc, ensure_ascii=False)}\n"
+
+
+def insert(session: Session, data: str):
+    url = "http://localhost:9200/_bulk"
+    headers = {"content-type": "application/x-ndjson"}
+    session.post(url, headers=headers, data=data)
+
+
+def main():
+    with requests.Session() as session:
+        for batch in tqdm(batch_data):
+            data = []
+            for item in batch:
+                data.append(generate_document(item))
+            data = "".join(data)
+            insert(session, data)
+
+
+if __name__ == "__main__":
+    main()

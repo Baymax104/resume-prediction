@@ -20,5 +20,6 @@ mapping = {
     }
 }
 
-response = requests.put(f"{es_url}/resumes", json=mapping)
+index = "resumes"
+response = requests.put(f"{es_url}/{index}", json=mapping)
 print(response)

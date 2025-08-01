@@ -23,7 +23,7 @@ def save_model(model, model_name, log_dir):
 
 
 def load_model(model, model_path):
-    model_path = Path(model_path)
+    model_path = Path(model_path).resolve()
     if not model_path.exists():
         raise ValueError(f'Model {str(model_path)} does not exist.')
     state_dict = torch.load(model_path)

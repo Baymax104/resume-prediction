@@ -28,7 +28,6 @@ class ResumePredictor(nn.Module):
     def __init__(self, hidden_dim: int, output_dim: int, dropout: float = 0.1):
         super(ResumePredictor, self).__init__()
         self.embedding = TextEmbedding(hidden_dim, dropout)
-        self.layer_norm = nn.LayerNorm(hidden_dim)
         self.mlp = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim * 2),
             nn.ReLU(),

@@ -1,6 +1,7 @@
 # -*- coding: UTF-8 -*-
 from pathlib import Path
 
+import torch
 from torch import nn
 from transformers import AutoModel
 
@@ -15,5 +16,6 @@ class ResumeEmbedding(nn.Module):
             parameter.requires_grad = False
 
     def forward(self, input_ids, attention_mask):
-        outputs = self.bge(input_ids=input_ids, attention_mask=attention_mask)
+        with torch.no_grad():
+            outputs = self.bge(input_ids=input_ids, attention_mask=attention_mask)
         return outputs.pooler_output

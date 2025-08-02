@@ -28,7 +28,7 @@ class ResumeDataset(Dataset):
         model_dir = settings.model.pretrained_model_dir
         bert_path = model_dir / "bert-base-chinese"
         bge_path = model_dir / "bge-large-zh-v1.5"
-        self.tokenizer = AutoTokenizer.from_pretrained(bert_path.resolve(), use_fast=True)
+        self.tokenizer = AutoTokenizer.from_pretrained(bge_path.resolve(), use_fast=True)
         self.embedding_tokenizer = AutoTokenizer.from_pretrained(bge_path.resolve(), use_fast=True)
 
     def __load_data(self, settings: Settings) -> list[dict]:

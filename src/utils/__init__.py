@@ -1,4 +1,3 @@
 # -*- coding: UTF-8 -*-
-from utils.train import *
-from utils.record import Recorder
 from utils.setting import *
+from utils.train import *

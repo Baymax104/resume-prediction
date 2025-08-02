@@ -1,18 +1,22 @@
 # -*- coding: UTF-8 -*-
+from pathlib import Path
+
 from torch import nn
 from transformers import AutoModel
-
-from setting import SettingManager
 
 
 class TextEmbedding(nn.Module):
 
-    def __init__(self, output_dim: int, dropout: float = 0.1):
+    def __init__(
+        self,
+        output_dim: int,
+        pretrained_model_dir: Path,
+        dropout: float = 0.1
+    ):
         super(TextEmbedding, self).__init__()
-        settings = SettingManager.get_settings()
-        bert_path = settings.model.pretrained_model_dir / "bert-base-chinese"
+        bert_path = pretrained_model_dir / "bge-large-zh-v1.5"
         self.bert = AutoModel.from_pretrained(bert_path.resolve())
-        self.projection = nn.Linear(768, output_dim)
+        self.projection = nn.Linear(1024, output_dim)
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, input_ids, attention_mask, token_type_ids):
@@ -25,9 +29,15 @@ class TextEmbedding(nn.Module):
 
 class ResumePredictor(nn.Module):
 
-    def __init__(self, hidden_dim: int, output_dim: int, dropout: float = 0.1):
+    def __init__(
+        self,
+        hidden_dim: int,
+        output_dim: int,
+        pretrained_model_dir: Path,
+        dropout: float = 0.1
+    ):
         super(ResumePredictor, self).__init__()
-        self.embedding = TextEmbedding(hidden_dim, dropout)
+        self.embedding = TextEmbedding(hidden_dim, pretrained_model_dir, dropout)
         self.mlp = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim * 2),
             nn.ReLU(),

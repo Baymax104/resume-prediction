@@ -27,6 +27,7 @@ def load_model(model, model_path):
     if not model_path.exists():
         raise ValueError(f'Model {str(model_path)} does not exist.')
     state_dict = torch.load(model_path)
+    state_dict = state_dict['model'] if 'model' in state_dict else state_dict
     model.load_state_dict(state_dict)
 
 

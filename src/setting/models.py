@@ -38,6 +38,8 @@ class TrainSettings(BaseSettings):
     seed: int = 200
     lr: float = 1e-5
     weight_decay: float = 1e-5
+    checkpoint_dir: Annotated[Path | None, AbsolutePath] = None
+    checkpoint_step: int = 50
 
 
 class Settings(BaseSettings):

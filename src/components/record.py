@@ -1,24 +1,26 @@
 # -*- coding: UTF-8 -*-
 import time
-from pathlib import Path
 from typing import Any, Literal
 
 import torch
 from matplotlib import pyplot as plt
 from prettytable import PrettyTable
 
+from setting import Settings
+
 
 class Recorder:
 
-    def __init__(self, metrics: list[str], mode: Literal["train", "test"], log_dir: Path):
+    def __init__(self, metrics: list[str], mode: Literal["train", "test"], settings: Settings):
         self.metrics = metrics
         self.mode = mode
-        self.log_dir = log_dir
+        self.log_dir = settings.log.log_dir
         self.train = self.mode != "test"
         field_names = (["Epoch"] if self.train else []) + [metric.title() for metric in self.metrics]
         self.prettytable = PrettyTable(field_names=field_names)
         self.record_dict = {metric: [] for metric in self.metrics}
         self.step = 0
+        self.checkpoints_dir = settings.train.checkpoint_dir
 
     def add_record(self, step_dict: dict[str, Any]):
         for metric, value in step_dict.items():
@@ -58,3 +60,19 @@ class Recorder:
 
     def __str__(self):
         return str(self.record_dict)
+
+    def save_checkpoint(self, model, optimizer, epoch):
+        self.checkpoints_dir.mkdir(parents=True, exist_ok=True)
+        states = {
+            "epoch": epoch,
+            "model": model.state_dict(),
+            "optimizer": optimizer.state_dict(),
+        }
+        checkpoint_path = self.checkpoints_dir / f"checkpoint_{epoch}.pt"
+        torch.save(states, checkpoint_path)
+
+    def load_checkpoint(self, checkpoint: int) -> dict:
+        if not self.checkpoints_dir.exists():
+            raise FileNotFoundError(f"Checkpoint directory {self.checkpoints_dir} does not exist")
+        checkpoint_path = self.checkpoints_dir / f"checkpoint_{checkpoint}.pt"
+        return torch.load(checkpoint_path)

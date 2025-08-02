@@ -1,12 +1,10 @@
 # -*- coding: UTF-8 -*-
-import os
 from pathlib import Path
 
 from pydantic import AfterValidator
 
 
-def get_env() -> str:
-    env = os.getenv("ENV", "development")
+def fix_env(env: str) -> str:
     if env in ["dev", "development"]:
         env = "development"
     elif env in ["prod", "production"]:

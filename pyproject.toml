@@ -23,6 +23,7 @@ dependencies = [
     "torchvision>=0.22.1",
     "tqdm>=4.67.1",
     "transformers>=4.53.2",
+    "typer>=0.16.0",
     "zhipuai>=2.1.5.20250717",
 ]
 

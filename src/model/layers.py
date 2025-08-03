@@ -1,12 +1,11 @@
 # -*- coding: UTF-8 -*-
 import math
+from pathlib import Path
 
 import torch
 from torch import nn
 from torch.nn import functional as F
 from transformers import BertModel
-
-from setting import SettingManager
 
 
 class TimeEncoder(nn.Module):
@@ -33,15 +32,12 @@ class TimeEncoder(nn.Module):
 
 class ResumeEncoder(nn.Module):
 
-    def __init__(self, output_dim: int):
+    def __init__(self, pretrained_model_dir: Path, output_dim: int, dropout: float = 0.1):
         super().__init__()
-        settings = SettingManager.get_settings()
-        bert_path = settings.model.pretrained_model_dir / "bert-base-chinese"
+        bert_path = pretrained_model_dir / "bge-large-zh-v1.5"
         self.bert = BertModel.from_pretrained(bert_path.resolve())
-        for parameter in self.bert.parameters():
-            parameter.requires_grad = False
-        self.projection = nn.Linear(768, output_dim)
-        self.dropout = nn.Dropout(p=0.3)
+        self.projection = nn.Linear(1024, output_dim)
+        self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, input_ids, attention_mask):
         """
@@ -137,6 +133,7 @@ class TransformerModel(nn.Module):
         num_heads: int = 8,
         num_layers: int = 6,
         dim_feedforward: int = 2048,
+        window_size: int = 2,
         dropout: float = 0.1,
     ):
         super(TransformerModel, self).__init__()
@@ -213,18 +210,38 @@ class LSTMModel(nn.Module):
         return output
 
 
+class AveragePooling(nn.Module):
+
+    def __init__(self, output_dim: int):
+        super(AveragePooling, self).__init__()
+        self.pool = nn.AdaptiveAvgPool1d(output_size=output_dim)
+
+    def forward(self, x):
+        """
+        Args:
+            x: (batch_size, window_size, embedding_dim)
+
+        Returns:
+            output: (batch_size, output_dim, embedding_dim)
+        """
+        x = x.transpose(1, 2)
+        x = self.pool(x)
+        x = x.transpose(1, 2)
+        return x
+
+
 class ResumePredictor(nn.Module):
 
     def __init__(
         self,
+        pretrained_model_dir: Path,
         d_model: int = 512,
         num_layers: int = 6,
         embedding_dim: int = 128,
         dropout: float = 0.1,
     ):
         super(ResumePredictor, self).__init__()
-        self.time_encoder = TimeEncoder(input_dim=1, hidden_dim=256, output_dim=d_model)
-        self.resume_encoder = ResumeEncoder(output_dim=d_model)
+        self.resume_encoder = ResumeEncoder(pretrained_model_dir, output_dim=d_model)
         self.dropout = nn.Dropout(p=dropout)
         self.layer_norm = nn.LayerNorm(d_model)
         self.projection = nn.Sequential(
@@ -239,36 +256,24 @@ class ResumePredictor(nn.Module):
             num_layers=num_layers,
             dropout=dropout,
         )
-        self.lstm = LSTMModel(
-            input_dim=d_model,
-            hidden_dim=d_model,
-            num_layers=num_layers,
-        )
-
-        self.pool = AttentionPooling(embedding_dim=embedding_dim)
+        self.pool = AveragePooling(output_dim=1)
         self.decoder = Decoder(input_dim=d_model, hidden_dim=2048, output_dim=embedding_dim)
 
-    def forward(self, input_ids, attention_mask, resume_time):
+    def forward(self, input_ids, attention_mask):
         """
         Args:
             input_ids: (batch_size, window_size, seq_len)
             attention_mask: (batch_size, window_size, seq_len)
-            resume_time: (batch_size, window_size, 1)
 
         Returns:
             output: (batch_size, embedding_dim)
         """
 
         # (batch_size, window_size, d_model)
-        time_features = self.time_encoder(resume_time)
-        # (batch_size, window_size, d_model)
-        resume_features = self.resume_encoder(input_ids, attention_mask)
-
-        # (batch_size, window_size, d_model * 2)
-        x = torch.cat([time_features, resume_features], dim=-1)
+        x = self.resume_encoder(input_ids, attention_mask)
 
         # (batch_size, window_size, d_model)
-        x = self.projection(x)
+        # x = self.projection(x)
         y = self.transformer(x)
         # y = self.lstm(x)
         x = x + y
@@ -278,6 +283,5 @@ class ResumePredictor(nn.Module):
         x = self.decoder(x)
 
         # pool for window_size dimension
-        x = self.pool(x)  # (batch_size, embedding_dim)
-        x = self.dropout(x)
+        x = self.pool(x).squeeze()  # (batch_size, embedding_dim)
         return x

@@ -26,7 +26,6 @@ class ResumeDataset(Dataset):
             self.data = self.data[:self.batch_size]
 
         model_dir = settings.model.pretrained_model_dir
-        bert_path = model_dir / "bert-base-chinese"
         bge_path = model_dir / "bge-large-zh-v1.5"
         self.tokenizer = AutoTokenizer.from_pretrained(bge_path.resolve(), use_fast=True)
         self.embedding_tokenizer = AutoTokenizer.from_pretrained(bge_path.resolve(), use_fast=True)
@@ -54,35 +53,20 @@ class ResumeDataset(Dataset):
         return flatten_data
 
     def __getitem__(self, idx):
-        history, target = self.data[idx]
-        history: list[str]
-        target: str
+        history: list[str] = self.data[idx][0]
+        target: str = self.data[idx][1].split(" ", 1)[1].strip()
 
-        # # split time and resume
-        # times = []
-        # resumes = []
-        # for resume in history:
-        #     time, resume = resume.split(" ", 1)
-        #     times.append(time.strip())
-        #     resumes.append(resume.strip())
-        # target = target.split(" ", 1)[1].strip()
-        #
-        # # extract features
-        # time_features = self.__extract_time_features(times)
-        # resume_features = self.__extract_resume_features(resumes)
-        # target_feature = self.__extract_target_features(target)
+        # extract features
         resume_features = self.__extract_resume_features(history)
         target_feature = self.__extract_target_features(target)
 
         # convert to tensor
-        # resume_time = torch.tensor(time_features, dtype=torch.float)  # (window_size, 1)
         resume_input_ids = resume_features["input_ids"].squeeze()  # (seq_len,)
         resume_attention_mask = resume_features["attention_mask"].squeeze()  # (seq_len,)
         resume_token_type_ids = resume_features["token_type_ids"].squeeze()  # (seq_len,)
         target_input_ids = target_feature["input_ids"].squeeze()  # (seq_len,)
         target_attention_mask = target_feature["attention_mask"].squeeze()  # (seq_len,)
         return {
-            # "window_resume_time": resume_time,
             "window_resume_input_ids": resume_input_ids,
             "window_resume_attention_mask": resume_attention_mask,
             "window_resume_token_type_ids": resume_token_type_ids,

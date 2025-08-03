@@ -5,6 +5,7 @@ from typing import Annotated
 import torch
 import typer
 from torch import nn, optim
+from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 from torchmetrics import CosineSimilarity, MetricCollection
 from tqdm import tqdm
 from typer import Option
@@ -59,6 +60,8 @@ def train(
         optimizer.load_state_dict(states["optimizer"])
         start = states["epoch"] + 1
 
+    scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, eta_min=1e-6)
+
     model.train()
     print('=' * 20 + f' Training in {device} using {env} environment ' + '=' * 20)
     log_train_settings(settings)
@@ -92,6 +95,7 @@ def train(
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            scheduler.step()
 
         train_loss /= len(loader)
         train_metrics = metrics.compute()
@@ -109,7 +113,7 @@ def train(
     if not settings.debug:
         recorder.plot()
         print('Saving model...')
-        save_model(model, "bge", settings.log.log_dir)
+        save_model(model, "bge-mlp", settings.log.log_dir)
     print("Done!")
 
 

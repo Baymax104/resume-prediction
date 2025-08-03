@@ -18,10 +18,10 @@ development:
     log_dir: ./logs
 
   train:
-    device: "cuda:7"
+    device: "cuda"
     epochs: 2
     seed: 200
     lr: 1e-4
     weight_decay: 1e-5
-    checkpoint_dir: ./logs/checkpoints-bge
+    checkpoint_dir: ./logs/checkpoints
     checkpoint_step: 1

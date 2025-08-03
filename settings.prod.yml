@@ -21,7 +21,7 @@ production:
     device: "cuda:7"
     epochs: 50
     seed: 400
-    lr: 1e-5
+    lr: 5e-5
     weight_decay: 1e-5
-    checkpoint_dir: ./logs/checkpoints-bge
+    checkpoint_dir: ./logs/checkpoints
     checkpoint_step: 25

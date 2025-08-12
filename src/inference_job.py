@@ -88,7 +88,6 @@ def inference(model_path: Path, resume: str) -> list[float]:
         token_type_ids=window_resume_token_type_ids,
     )
 
-    result_embedding = result_embedding.detach().cpu().numpy()
     result_embedding = result_embedding.squeeze().tolist()
     return result_embedding
 

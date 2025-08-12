@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 from torch.utils.data import DataLoader
 
-from data.dataset import ResumeDataset
+from components.dataset import ResumeDataset
 
 
 class ResumeDataLoader(DataLoader):

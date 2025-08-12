@@ -10,8 +10,7 @@ from torchmetrics import CosineSimilarity, MetricCollection
 from tqdm import tqdm
 from typer import Option
 
-from components import Recorder
-from data import ResumeDataLoader, ResumeDataset
+from components import Recorder, ResumeDataLoader, ResumeDataset
 from model import ResumeEmbedding, ResumePredictor
 from setting import SettingManager, Settings
 from utils import fix_env, load_model, log_train_settings, save_model, set_seed
@@ -101,6 +100,7 @@ def train(
         train_metrics = metrics.compute()
         train_metrics["loss"] = train_loss
         recorder.add_record(train_metrics)
+        metrics.reset()
 
         if e % 5 == 0:
             recorder.print(clean=True)

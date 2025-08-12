@@ -9,8 +9,7 @@ from torchmetrics import CosineSimilarity, MetricCollection
 from tqdm import tqdm
 from typer import Argument, Option
 
-from components import Recorder
-from data import ResumeDataLoader, ResumeDataset
+from components import Recorder, ResumeDataLoader, ResumeDataset
 from model import ResumeEmbedding, ResumePredictor
 from setting import SettingManager, Settings
 from utils import fix_env, load_model, set_seed

@@ -1,0 +1,16 @@
+name: person-resume-prediction
+
+services:
+  train:
+    container_name: resume_prediction
+    image: resume/train-env:v1
+    volumes:
+      - "./src:/app/src"
+      - "./logs:/app/logs"
+      - "./data:/app/data"
+      - "./settings.dev.yml:/app/settings.dev.yml"
+      - "./settings.prod.yml:/app/settings.prod.yml"
+    tty: true
+    stdin_open: true
+    runtime: nvidia
+    command: tail -f /dev/null

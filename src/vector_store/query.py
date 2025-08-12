@@ -35,7 +35,8 @@ def search(text_emb: list[float]):
 
     url = "http://localhost:9200/resumes/_search"
     response = requests.post(url, json=query)
-    results = response.json()["hits"]
+    results = response.json()["hits"]["hits"]
+    results = [{"score": r["_score"], "content": r["_source"]["content"]} for r in results]
     return results
 
 

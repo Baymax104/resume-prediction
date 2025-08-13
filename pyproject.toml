@@ -7,6 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     "accelerate>=1.9.0",
     "dynaconf>=3.2.11",
+    "fastapi>=0.116.1",
     "huggingface-hub[cli]>=0.33.4",
     "json-repair>=0.47.8",
     "jupyter>=1.1.1",
@@ -24,6 +25,7 @@ dependencies = [
     "tqdm>=4.67.1",
     "transformers>=4.53.2",
     "typer>=0.16.0",
+    "uvicorn>=0.35.0",
     "zhipuai>=2.1.5.20250717",
 ]
 

@@ -1,7 +1,7 @@
 [project]
-name = "person-resume-prediction"
+name = "resume-prediction"
 version = "0.1.0"
-description = "Add your description here"
+description = "A PyTorch-based system that predicts a person's next job position by analyzing their resumes."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

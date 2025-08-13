@@ -2,6 +2,7 @@
 import json
 import re
 from datetime import datetime
+from pathlib import Path
 from typing import Literal
 
 from torch.utils.data import Dataset
@@ -118,3 +119,38 @@ class ResumeDataset(Dataset):
 
     def __len__(self):
         return len(self.data)
+
+
+class InferenceDataset(Dataset):
+
+    def __init__(self, json_path: Path):
+        data: list[dict] = json.load(json_path.open("r", encoding="utf-8"))
+        self.data = [d for d in data if len(d["resumes"]) >= 2]
+
+        model_path = Path(__file__).parent.parent.parent / "model" / "bge-large-zh-v1.5"
+        self.tokenizer = AutoTokenizer.from_pretrained(model_path.resolve())
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        item = self.data[idx]
+        history = item["resumes"][-2:]
+        resume_features = self.tokenizer(
+            [history],
+            padding="max_length",
+            truncation=True,
+            max_length=128,
+            return_tensors="pt",
+            return_token_type_ids=True,
+        )
+        input_ids = resume_features["input_ids"].squeeze()  # (seq_len,)
+        attention_mask = resume_features["attention_mask"].squeeze()  # (seq_len,)
+        token_type_ids = resume_features["token_type_ids"].squeeze()  # (seq_len,)
+
+        return {
+            "item": item,
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "token_type_ids": token_type_ids,
+        }

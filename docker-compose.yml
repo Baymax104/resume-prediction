@@ -3,7 +3,7 @@ name: person-resume-prediction
 services:
   train:
     container_name: resume_prediction
-    image: resume/train-env:v1
+    image: resume/train-env:v2
     volumes:
       - "./src:/app/src"
       - "./logs:/app/logs"
@@ -13,4 +13,7 @@ services:
     tty: true
     stdin_open: true
     runtime: nvidia
+    ports:
+      - "8000:8000"
     command: tail -f /dev/null
+#    command: /app/.venv/bin/python /app/src/server.py

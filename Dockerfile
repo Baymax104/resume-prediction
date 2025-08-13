@@ -1,9 +1,11 @@
-FROM nvcr.io/nvidia/pytorch:24.06-py3
+FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+RUN sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
+
 RUN apt-get update && \
-    apt-get install -y vim && \
+    apt-get install -y vim python3 python3-pip && \
     apt-get clean
 
 RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple

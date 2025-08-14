@@ -55,9 +55,8 @@ def inference(
     print(f"Data loaded, total {len(dataset)}")
 
     print("Embedding position...")
-    # (batch_size, 1024)
-    target_embedding = embedding_position(position, device)
-    target_embedding = target_embedding.expand(batch_size, -1)
+    # (1, 1024)
+    position_embedding = embedding_position(position, device)
 
     print("Initializing model...")
     model = init_model(weight_path, device)
@@ -77,9 +76,11 @@ def inference(
             token_type_ids=token_type_ids,
         )
 
+        target_embedding = position_embedding.expand(result_embedding.size(0), -1)
+
         similarity = metrics(result_embedding, target_embedding)
         similarity = similarity.tolist()
-        for i in range(batch_size):
+        for i in range(result_embedding.size(0)):
             result_scores.append({
                 "name": items[i]["name"],
                 "score": similarity[i],

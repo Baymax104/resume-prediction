@@ -2,7 +2,6 @@ development:
   data:
     train: ./data/train.json
     test: ./data/test.json
-    target: ./data/target.json
     batch_size: 1
     num_workers: 0
 

@@ -13,10 +13,10 @@ model_path = root / "model" / "bge-large-zh-v1.5"
 tokenizer = AutoTokenizer.from_pretrained(model_path.resolve())
 model = AutoModel.from_pretrained(model_path.resolve(), device_map="auto")
 
-texts: list[str] = json.load(open(root / "data" / "target.json", "r", encoding="utf-8"))
+targets: list[dict] = json.load(open(root / "data" / "target.json", "r", encoding="utf-8"))
 
 batch_size = 512
-batch_texts = [texts[i:i + batch_size] for i in range(0, len(texts), batch_size)]
+batch_samples = [targets[i:i + batch_size] for i in range(0, len(targets), batch_size)]
 
 
 def encode_text(texts: list[str]) -> tuple:
@@ -41,16 +41,18 @@ def inference(input_ids, attention_mask):
 
 def main():
     embeddings = []
-    for batch_text in tqdm(batch_texts):
-        encoded = encode_text(batch_text)
+    for batch_sample in tqdm(batch_samples):
+        texts = [sample["content"] for sample in batch_sample]
+        encoded = encode_text(texts)
         output = inference(*encoded)
         tensors = torch.unbind(output, dim=0)
         text_emb = [
             {
-                "text": text,
+                "id": sample["id"],
+                "text": sample["content"],
                 "emb": tensors[i]
             }
-            for i, text in enumerate(batch_text)
+            for i, sample in enumerate(batch_sample)
         ]
         embeddings.extend(text_emb)
     print("Saving...")

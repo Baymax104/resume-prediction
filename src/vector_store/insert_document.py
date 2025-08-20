@@ -1,7 +1,6 @@
 # -*- coding: UTF-8 -*-
 import json
 from pathlib import Path
-from uuid import uuid4
 
 import requests
 import torch
@@ -20,7 +19,7 @@ def generate_document(data: dict) -> str:
     index = {
         "index": {
             "_index": "resumes",
-            "_id": str(uuid4()),
+            "_id": data["id"],
         }
     }
     doc = {
